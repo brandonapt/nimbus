@@ -1,6 +1,7 @@
 const Discord = require('discord.js');
-const client = new Discord.Client({ allowedMentions: { parse: [] } });
+const client = new Discord.Client();
 const chalk = require('chalk');
+const roblox = require('noblox.js');
 const fs = require('fs');
 const figlet = require('figlet')
 let commandList = [];
@@ -9,7 +10,14 @@ const cooldowns = new Discord.Collection();
 client.commandList = commandList;
 const fetch = require('node-fetch')
 const prefix = ".";
+const moment = require('moment')
+moment().format(); 
 client.databases = {};
+
+
+
+var userTickets = new Map(); // Create a JS Map Object.
+
 
 // Initialize the database
 const Sequelize = require('sequelize');
@@ -23,10 +31,89 @@ console.log('[DB] SQLITE3 Initialized!')
 // Set up the servers database (holds servers that own the product)
 const database = sequelize.define('owns', {
     serverId: Sequelize.STRING,
-    owns: Sequelize.BOOLEAN
+    owns: Sequelize.BOOLEAN,
+    daysLeft: Sequelize.INTEGER,
+    groupId: Sequelize.INTEGER,
+    codeUsed: Sequelize.STRING,
 });
 database.sync();
 client.databases.owns = database;
+
+const codeDB = sequelize.define('codes', {
+    code: Sequelize.STRING,
+    valid: Sequelize.BOOLEAN,
+    serverId: Sequelize.STRING,
+    days: Sequelize.INTEGER,
+    used: Sequelize.BOOLEAN
+});
+codeDB.sync();
+client.databases.codes = codeDB
+
+let dayCycle = async () => {
+    console.log('doing day cycle')
+    const thing = await sequelize.models.codes.findAll()
+    const thing2 = await sequelize.models.owns.findAll()
+    for(i in thing) {
+        if (thing[i].dataValues.used == true) {
+            //await console.log(thing[i].dataValues.code)
+            let eRows = await client.databases.codes.update({ days: thing[i].dataValues.days - 1 }, { where: { code: thing[i].dataValues.code } });
+            let codeInfo = await client.databases.codes.findOrCreate({
+                where: {
+                    code: thing[i].dataValues.code
+                }
+            })
+            let server = codeInfo[0].dataValues.serverId
+    }
+    for(i in thing2) {
+        if (thing2[i].dataValues.owns == true) {
+            await console.log(thing2[i].dataValues.codeUsed + " minus one day nerd")
+            let moreRows = await client.databases.owns.update({ daysLeft: thing2[i].dataValues.daysLeft - 1 }, { where: { codeUsed: thing2[i].dataValues.codeUsed } });
+
+        }
+    }
+    }
+
+    return setTimeout(dayCycle, 86400000);
+
+}
+//dayCycle()
+// Use key check function
+
+let checkKey = async () => {
+    console.log('checking keys')
+    const thing = await sequelize.models.codes.findAll()
+    for(i in thing) {
+        if (thing[i].days <= 0)
+        {
+            if (thing[i].valid == true) {
+
+            
+            //await console.log(thing[i].dataValues.code)
+            let affectedRows = await client.databases.codes.update({ valid: false, days: 0 }, { where: { code: thing[i].dataValues.code } });
+        }
+    }
+    }
+
+    const thing2 = await sequelize.models.owns.findAll({
+        where: {
+          daysLeft: 0,
+        }
+      })
+    for(i in thing2) {
+            //await console.log(thing2[i].dataValues.codeUsed)
+            let affectedRows = await client.databases.owns.update({ owns: false }, { where: { codeUsed: thing2[i].dataValues.codeUsed } });
+        
+    }
+
+    return setTimeout(checkKey, 86400000);
+
+}
+
+//checkKey()
+
+
+
+
 
 // Initialize member counter
 let currentMemberCount = 0;
@@ -34,7 +121,7 @@ let firstCheck = true;
 
 let refreshCount = async () => {
     let channel = await client.channels.fetch("899325848241442826");
-    console.log('Checking members...')
+    //console.log('Checking members...')
     let groupResponse = await fetch(`https://groups.roblox.com/v1/groups/12636769`);
     let groupBody = await groupResponse.json();
     let newCount = groupBody.memberCount;
@@ -143,3 +230,45 @@ client.on('message', async (message) => {
 });
 
 client.login(process.env.token);
+require('./server.js')
+
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+    res.sendStatus(200);
+});
+
+const listener = app.listen(process.env.PORT || 80, () => {
+    console.log('Your app is currently listening on port: ' + listener.address().port);
+});
+
+app.get('/isKeyValid', (req, res) => {
+    let key = req.query.key;
+    let serverId = req.query.server;
+
+    if (key == null || serverId == null) return res.send('Invalid Parameters!')
+
+    let validateTest = async function () {
+        let doesOwnInfo = await client.databases.codes.findOrCreate({
+            where: {
+                code: key,
+                serverId: serverId,
+            },
+        });
+        
+        if (doesOwnInfo[0].dataValues.used == null)
+        {
+            res.send(false)
+        } else {
+            res.send(doesOwnInfo[0].dataValues.used)
+        }
+    }
+
+    validateTest()
+
+});
+
+
+module.exports.codeDB = codeDB;
+module.exports.ownsDB = database

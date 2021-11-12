@@ -39,7 +39,7 @@ module.exports = {
             let commandString = category.map(c => `\`.${c.name}${c.config.usage ? ` ${c.config.usage}` : ''}\` - ${c.config.description}`).join('\n');
             embed.addField(`${categoryName}`, `${commandString}`);
         }
-        embed.setDescription('Here is a list of the bot commands:');
+        embed.setDescription('Here is a list of the bot commands: TICKETS ARE FOR SUPPORT SERVER ONLY');
         embed.setColor("YELLOW");
         embed.setAuthor(message.author.tag, message.author.displayAvatarURL());
         return message.channel.send(embed);
