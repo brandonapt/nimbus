@@ -119,6 +119,7 @@ let checkKey = async () => {
 let currentMemberCount = 0;
 let firstCheck = true;
 
+/*
 let refreshCount = async () => {
     let channel = await client.channels.fetch("899325848241442826");
     //console.log('Checking members...')
@@ -143,6 +144,7 @@ let refreshCount = async () => {
 }
 
 refreshCount();
+*/
 
 // Load commands from commands folder.
 fs.readdir('./commands/', async (err, files) => {

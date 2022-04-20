@@ -35,17 +35,17 @@ module.exports = {
         let gen = await generateApiKey();
         let codeInfo = await client.databases.owns.findOrCreate({
             where: {
-                code: gen,
+                codeUsed: gen,
             },
             defaults: {
-                code: gen,
-                valid: false,
+                codeUsed: gen,
+                valid: true,
                 serverId: args[0],
                 used: false
             }
         });
 
-        const affectedRows = await client.databases.codes.update({ valid: true, used: false, code: gen, days: args[1] }, { where: { serverId: args[0], code: gen} });
+        const affectedRows = await client.databases.codes.findOrCreate({ defaults: { valid: true, used: false, code: gen, days: args[1] },  where: { serverId: args[0], code: gen} });
         message.reply(gen)
     }
 }
